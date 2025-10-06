@@ -44,36 +44,41 @@ class _PhotoUploadPageState extends State<PhotoUploadPage> {
   
   static const String apiBaseUrl = "http://192.168.68.100:3000"; // 개발용 서버 주소
 
-// 사진선택 및 업로드
-  Future<void> pickAndUploadPhoto() async {
-    try {
-      final pickedFile = await _picker.pickImage(source: ImageSource.camera);
+// 카메라에서 사진 선택 및 업로드
+  Future<void> pickAndUploadFromCamera() async {
+    await _pickAndUpload(ImageSource.camera);
+  }
+
+// 갤러리에서 사진 선택 및 업로드
+  Future<void> pickAndUploadFromGallery() async {
+    await _pickAndUpload(ImageSource.gallery);
+  }
+
+// (공통) 사진 선택 및 업로드
+  Future<void> _pickAndUpload(ImageSource source) async {
+    try{
+      final pickedFile = await _picker.pickImage(source: source);
       if (pickedFile == null) return;
 
       File imageFile = File(pickedFile.path);
 
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$apiBaseUrl/upload'),
-      );
-      request.files.add(
-        await http.MultipartFile.fromPath('photo', imageFile.path),
-      );
+      var request = http.MultipartRequest('POST', Uri.parse('$apiBaseUrl/upload'));
+      request.files.add(await http.MultipartFile.fromPath('photo', imageFile.path));
 
       var response = await request.send();
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200) 
+      {
         await fetchPhotos();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("업로드 성공")),
-        );
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("업로드 실패")),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("업로드 성공")));
       }
+      else
+      {
+        if(!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("업로드 실패")));
+      }
+
     } catch (e) {
       debugPrint("업로드 중 오류: $e");
     }
@@ -106,9 +111,13 @@ class _PhotoUploadPageState extends State<PhotoUploadPage> {
       ),
       body: Column(
         children: [
-          ElevatedButton(
-            onPressed: pickAndUploadPhoto,
-            child: const Text("사진 찍기"),
+          IconButton.filled(
+            onPressed: pickAndUploadFromCamera,
+            icon: Icon(Icons.camera_alt),
+          ),
+          IconButton.filled(
+            onPressed: pickAndUploadFromGallery,
+            icon: Icon(Icons.image)
           ),
           Expanded(
             child: GridView.builder(
